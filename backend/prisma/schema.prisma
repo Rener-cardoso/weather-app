@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  cities City[]
+  created_at    DateTime @default(now())
+
+  @@map("users")
+}
+
+model City {
+  id String @id @default(uuid())
+  name String
+  temperature Float
+  tempMin Float
+  tempMax Float
+  humidity Int
+  condition String
+  user User @relation(fields: [user_id], references: [id])
+  user_id String
+  created_at    DateTime @default(now())
+
+  @@map("cities")
+}

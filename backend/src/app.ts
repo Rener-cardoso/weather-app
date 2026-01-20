@@ -1,0 +1,46 @@
+import fastify from "fastify";
+import { weatherRoutes } from "./http/controllers/weather/routes";
+import fastifyJwt from "@fastify/jwt";
+import { env } from "./env";
+import { usersRoutes } from "./http/controllers/users/routes";
+import { ZodError } from "zod";
+import { favoriteRoutes } from "./http/controllers/favorite-cities/routes";
+import { FavoriteCityAlreadyExistsError } from "./use-cases/errors/favorite-city-already-exists-error";
+
+export const app = fastify();
+
+app.register(fastifyJwt, {
+  secret: env.JWT_SECRET,
+  cookie: {
+    cookieName: 'refreshToken',
+    signed: false,
+  },
+  // sign: {
+  //   expiresIn: '10m',
+  // }
+})
+
+app.register(usersRoutes);
+app.register(weatherRoutes);
+app.register(favoriteRoutes);
+
+app.setErrorHandler((error, _, reply) => {
+  if (error instanceof ZodError) {
+    return reply
+      .status(400)
+      .send({ message: 'Validation error', issues: error.format() })
+  }
+
+  // Domain errors
+  if (error instanceof FavoriteCityAlreadyExistsError) {
+    return reply.status(409).send({ message: error.message })
+  }
+
+  if (env.NODE_ENV !== 'production') {
+    console.error(error)
+  } else {
+    // Todo: Here we should log to an external tool like DataDog/NewRelic/Sentry
+  }
+
+  return reply.status(500).send({ message: 'Internal server error.' })
+})
